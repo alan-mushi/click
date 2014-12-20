@@ -11,6 +11,7 @@
 #include <math.h>
 #include <cairo-ps.h>
 #include <cairo-pdf.h>
+#include <cairo-svg.h>
 #include "wdiagram.hh"
 #include "dwidget.hh"
 #include "crouter.hh"
@@ -97,7 +98,7 @@ static cairo_status_t cairo_surface_stdout_write(void *, const unsigned char *st
 }
 }
 
-void cdiagram::export_pdf(const char *filename, crouter *cr,
+void cdiagram::export_to_file(const char *filename, crouter *cr,
 			  point page_size, point margin, double scale,
 			  bool multipage)
 {
@@ -113,12 +114,12 @@ void cdiagram::export_pdf(const char *filename, crouter *cr,
     cairo_destroy(cairo);
     cairo_surface_destroy(crs);
 
-    cd->export_pdf(filename, false, cr, generation, page_size, margin, scale, multipage);
+    cd->export_to_file(filename, false, cr, generation, page_size, margin, scale, multipage);
 
     delete cd;
 }
 
-void cdiagram::export_pdf(const char *filename, bool eps,
+void cdiagram::export_to_file(const char *filename, bool eps,
 			  crouter *cr, unsigned generation,
 			  point page_size, point margin, double scale,
 			  bool multipage)
@@ -135,8 +136,10 @@ void cdiagram::export_pdf(const char *filename, bool eps,
 #endif
     } else if (!filename || strcmp(filename, "") == 0 || strcmp(filename, "-") == 0)
 	crs = cairo_pdf_surface_create_for_stream(cairo_surface_stdout_write, 0, page_size.x(), page_size.y());
-    else
+    else if (strncmp("pdf", filename, 4) == 0)
 	crs = cairo_pdf_surface_create(filename, page_size.x(), page_size.y());
+    else if (strncmp("svg", filename, 4) == 0)
+	crs = cairo_svg_surface_create(filename, page_size.x(), page_size.y());
 
     cairo_t *cairo = cairo_create(crs);
     dcontext dcx(cr, pango_cairo_create_layout(cairo), cairo,
@@ -455,7 +458,7 @@ void wdiagram::export_diagram(const char *filename, bool eps)
 {
     if (!_cdiagram)
 	router_create(true, true);
-    _cdiagram->export_pdf(filename, eps, main(), dcontext::step_generation(),
+    _cdiagram->export_to_file(filename, eps, main(), dcontext::step_generation(),
 			  point(0, 0), point(0, 0), 1, false);
 }
 
